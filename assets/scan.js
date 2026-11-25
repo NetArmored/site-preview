@@ -162,6 +162,7 @@ function pickFollowUp(){
 }
 
 /* ---------------- UI ---------------- */
+console.log('SCAN INIT: scan-body exists?', !!document.querySelector('.scan-body'), 'shell?', !!document.querySelector('.scan-shell'));
 var body=(function(){
   var b=document.querySelector('.scan-body');
   if(b) return b;
@@ -172,7 +173,8 @@ var body=(function(){
   }
   b=shell.querySelector('.scan-body');
   if(!b){ b=document.createElement('div'); b.className='scan-body'; shell.appendChild(b); }
-  return b;
+  console.log('SCAN BODY RESOLVED TO:', b, b===root?'ROOT':'NOT ROOT', b.className);
+return b;
 })();
 var lblEl=document.getElementById('scan-lbl')||document.querySelector('.scan-top .lbl');
 var progEl=document.getElementById('scan-prog')||document.querySelector('.scan-top .prog span');
