@@ -39,7 +39,7 @@
 </nav>
 <main id="main"><section class="phero"><div class="wrap"><nav aria-label="Breadcrumb" class="crumbs"><a href="../index.html">Home</a> <span aria-hidden="true">/</span> <span>Contact</span></nav><p class="eyebrow">Contact</p><h1>Talk to <span class="grad-text">NetArmored.</span></h1><p class="lead">Request a discovery consultation or ask a question. We’ll only use what you share to respond to your request.</p></div></section><section class="sec" style="padding-top:48px"><div class="wrap split" style="align-items:start">
 <div><div class="form-card"><h2 style="font-size:1.6rem">Request a discovery consultation</h2><p class="small muted">Fields marked * are required.</p><p class="note">Don’t include passwords, access credentials, payment details, health information, or details of an active security incident. Call (702) 714-0714 and we’ll arrange a secure way to share them.</p>
-<form action="https://www.netarmored.com/api/contact" data-contact-form="" method="post" novalidate="">
+<form action="../api/contact" data-contact-form="" method="post" novalidate="">
 <input name="lead_source" type="hidden" value="contact-page"/>
 <p aria-hidden="true" class="hp"><label>Company website<input autocomplete="off" name="company_website" tabindex="-1" type="text"/></label></p>
 <div class="frow"><div class="field"><label for="c-biz">Business name *</label><input aria-describedby="e-biz" autocomplete="organization" data-req="" id="c-biz" maxlength="160" name="biz" type="text"/><p class="err" id="e-biz">Please enter your business name.</p></div><div class="field"><label for="c-name">Your name *</label><input aria-describedby="e-name" autocomplete="name" data-req="" id="c-name" maxlength="160" name="name" type="text"/><p class="err" id="e-name">Please enter your name.</p></div></div>
@@ -50,6 +50,8 @@
 <div class="field"><label class="ck"><input aria-describedby="e-consent" data-req="" name="consent" type="checkbox"/>I agree that NetArmored may contact me about this request. *</label><p class="err" id="e-consent">Please confirm we may contact you about this request.</p></div>
 <div class="field" style="margin-top:8px"><label class="ck"><input name="marketing" type="checkbox"/>Optional: send me occasional NetArmored insights. (Separate from your request; unsubscribe anytime.)</label></div>
 <p class="small muted" style="margin-top:14px">Lead source: <span data-source-view="">contact-page</span>. See our <a href="../privacy/index.html">Privacy Notice</a>.</p>
+<div id="contact-turnstile"></div>
+<p class="err" id="e-turnstile" role="alert">Please complete the spam check.</p>
 <button class="btn btn-p" style="margin-top:12px" type="submit">Request consultation <span aria-hidden="true" class="arr">→</span></button>
 </form>
 <div class="form-result" data-result="ok" role="status"><h3>Thank you. Your request was sent.</h3><p class="small" style="margin:0">It was emailed to <a href="mailto:hello@netarmored.com">hello@netarmored.com</a>. You can also call <a href="tel:+17027140714">(702) 714-0714</a>.</p></div>

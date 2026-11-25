@@ -1,0 +1,6 @@
+# Copy to .dev.vars for `wrangler pages dev`. Never commit .dev.vars.
+# These placeholders are not real keys. The function refuses to send mail
+# while a value contains "placeholder".
+
+RESEND_API_KEY=re_placeholder_not_a_real_key
+TURNSTILE_SECRET_KEY=turnstile_secret_placeholder

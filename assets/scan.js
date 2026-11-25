@@ -1,5 +1,7 @@
-/* NetArmored AI Opportunity Scan — deterministic, client-side recommendation engine.
-   Runs entirely in the browser. Answers are held in memory only: nothing is stored, sent or logged. */
+/* NetArmored AI Opportunity Scan.
+   The on-screen snapshot is scored in the browser, including the "star the most important" boost.
+   Answers are emailed only after the visitor agrees. The Pages Function scores that report again.
+   Server scoring lives in functions/lib/engine.js and must stay in step with score() below. */
 (function(){
 'use strict';
 var root=document.getElementById('scan'); if(!root) return;
@@ -76,7 +78,9 @@ var OV={
 };
 
 /* ---------------- State ---------------- */
-var S={ind:null,step:-1,a:{},fu:null,fuA:null,dir:1};
+var S={ind:null,step:-1,a:{},fu:null,fuA:null,dir:1,lead:{name:'',email:'',phone:'',business:'',consent:false},mail:null};
+var previewHost=/(^|\.)github\.io$/i.test(location.hostname);
+var turnstileKey=null, turnstileToken='', turnstileWidget=null, turnstileState='off', turnstileLoadError=false;
 var params=new URLSearchParams(location.search); var qi=params.get('industry');
 if(qi && IND[qi]){ S.ind=qi; S.step=0; }
 
@@ -190,6 +194,7 @@ function focusTitle(){
 function render(){
   if(S.step===-1) renderTrack();
   else if(S.step==='fu') renderFU();
+  else if(S.step==='consent') renderConsent();
   else if(S.step==='think') finish();
   else if(S.step==='done') renderDone();
   else if(typeof S.step==='number') renderQ();
@@ -200,7 +205,7 @@ function renderTrack(){
   var keys=['hospitality','restaurant','retail','professional','logistics','home','healthcare','general'];
   var desc={hospitality:'Bars, restaurants, venues with or without gaming',restaurant:'Restaurants and bars (no gaming focus)',retail:'Stores, convenience, specialty retail',professional:'Agencies, firms, consultants',logistics:'Delivery, freight, transportation',home:'Contractors, home services, field ops',healthcare:'Practices and healthcare admin (non-clinical)',general:'Other small businesses'};
   getBody().innerHTML='<div class="qwrap"><p class="qnum">Before we begin</p><h2 class="qtitle">Which scan fits your business?</h2><p class="qhelp">Every scan uses the same five-question structure, with examples and recommendations adapted to the industry.</p><div class="track-pick" role="radiogroup" aria-label="Scan type">'+keys.map(function(k){return '<label class="ans"><input type="radio" name="track" value="'+k+'"'+(S.ind===k?' checked':'')+'><span class="box" aria-hidden="true"></span><span><b>'+esc(IND[k].name)+(k==='hospitality'?' \u2605':'')+'</b><span class="d">'+esc(desc[k])+'</span></span></label>';}).join('')+'</div><p class="err" id="err-track" role="alert">Please choose a scan to continue.</p><div class="scan-nav"><span></span><button type="button" class="btn btn-p" data-act="begin">Begin scan <span class="arr" aria-hidden="true">\u2192</span></button></div></div>';
-  getBody().querySelector('[data-act=begin]').addEventListener('click',function(){ var c=getBody().querySelector('input[name=track]:checked'); if(!c){ var e=document.getElementById('err-track'); e.classList.add('on'); getBody().querySelector('input[name=track]').focus(); return;} if(c.value!==S.ind){ S.a={}; S.fu=null; S.fuA=null; } S.ind=c.value; S.step=0; S.dir=1; render(); });
+  getBody().querySelector('[data-act=begin]').addEventListener('click',function(){ var c=getBody().querySelector('input[name=track]:checked'); if(!c){ var e=document.getElementById('err-track'); e.classList.add('on'); getBody().querySelector('input[name=track]').focus(); return;} if(c.value!==S.ind){ S.a={}; S.fu=null; S.fuA=null; S.lead={name:'',email:'',phone:'',business:'',consent:false}; S.mail=null; } S.ind=c.value; S.step=0; S.dir=1; render(); });
 }
 function renderQ(){
   var qs=questions(), q=qs[S.step], total=5, n=S.step+1;
@@ -248,7 +253,7 @@ function renderQ(){
   if(!multi && !q.readiness && !q.extra && !q.text){ getBody().querySelectorAll('input[name=q]').forEach(function(i){ i.addEventListener('change',function(){ setTimeout(next, RM?0:240); }); }); }
   getBody().querySelector('[data-act=back]').addEventListener('click',function(){ save(q); S.dir=-1; if(S.step===0){ S.step=-1; } else S.step--; render(); });
   getBody().querySelector('[data-act=next]').addEventListener('click',next);
-  function next(){ if(!save(q,true)) return; S.dir=1; if(S.step<total-1){ S.step++; render(); } else { S.fu=pickFollowUp(); if(S.fu){ S.step='fu'; render(); } else finish(); } }
+  function next(){ if(!save(q,true)) return; S.dir=1; if(S.step<total-1){ S.step++; render(); } else { S.fu=pickFollowUp(); if(S.fu){ S.step='fu'; render(); } else goConsent(); } }
 }
 function save(q,validate){
   var multi=q.type==='multi', ins=[].slice.call(getBody().querySelectorAll('input[name=q]:checked')).map(function(i){return i.value;});
@@ -268,20 +273,200 @@ function save(q,validate){
   return ok;
 }
 function renderFU(){
-  var f=FU[S.fu]; if(lblEl) lblEl.textContent='One clarifying question'; setTop(5,5);
-  getBody().innerHTML='<div class="qwrap"><div class="followup" style="margin-top:0"><span class="tag">'+esc(f.tag)+'</span><h2 class="qtitle" id="fq">'+esc(f.title)+'</h2><p class="qhelp" style="margin-bottom:16px">Optional \u2014 it sharpens your snapshot. We only ask the single question most likely to change the recommendation.</p><div class="answers" role="radiogroup" aria-labelledby="fq">'+f.opts.map(function(o){return '<label class="ans"><input type="radio" name="fu" value="'+o[0]+'"'+(S.fuA===o[0]?' checked':'')+'><span class="box" aria-hidden="true"></span><span><b>'+esc(o[1])+'</b></span></label>';}).join('')+'</div></div><div class="scan-nav"><button type="button" class="btn btn-g" data-act="back"><span aria-hidden="true">\u2190</span> Back</button><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="btn btn-g" data-act="skip">Skip</button><button type="button" class="btn btn-p" data-act="go">See my snapshot <span class="arr" aria-hidden="true">\u2192</span></button></span></div></div>';
+  var f=FU[S.fu]; if(lblEl) lblEl.textContent='One clarifying question'; if(progEl) progEl.style.width='100%';
+  getBody().innerHTML='<div class="qwrap"><div class="followup" style="margin-top:0"><span class="tag">'+esc(f.tag)+'</span><h2 class="qtitle" id="fq">'+esc(f.title)+'</h2><p class="qhelp" style="margin-bottom:16px">Optional \u2014 it sharpens your snapshot. We only ask the single question most likely to change the recommendation.</p><div class="answers" role="radiogroup" aria-labelledby="fq">'+f.opts.map(function(o){return '<label class="ans"><input type="radio" name="fu" value="'+o[0]+'"'+(S.fuA===o[0]?' checked':'')+'><span class="box" aria-hidden="true"></span><span><b>'+esc(o[1])+'</b></span></label>';}).join('')+'</div></div><div class="scan-nav"><button type="button" class="btn btn-g" data-act="back"><span aria-hidden="true">\u2190</span> Back</button><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="btn btn-g" data-act="skip">Skip</button><button type="button" class="btn btn-p" data-act="go">Continue <span class="arr" aria-hidden="true">\u2192</span></button></span></div></div>';
   getBody().querySelector('[data-act=back]').addEventListener('click',function(){ S.dir=-1; S.step=4; render(); });
-  getBody().querySelector('[data-act=skip]').addEventListener('click',function(){ S.fuA=null; finish(); });
-  getBody().querySelector('[data-act=go]').addEventListener('click',function(){ var c=getBody().querySelector('input[name=fu]:checked'); S.fuA=c?c.value:null; finish(); });
+  getBody().querySelector('[data-act=skip]').addEventListener('click',function(){ S.fuA=null; goConsent(); });
+  getBody().querySelector('[data-act=go]').addEventListener('click',function(){ var c=getBody().querySelector('input[name=fu]:checked'); S.fuA=c?c.value:null; goConsent(); });
+}
+function goConsent(){ S.dir=1; S.step='consent'; render(); }
+function apiBase(){
+  var scripts=document.getElementsByTagName('script');
+  for(var i=0;i<scripts.length;i++){
+    var src=scripts[i].src||'';
+    var m=src.match(/^(.*)assets\/scan\.js(?:\?.*)?$/);
+    if(m) return m[1];
+  }
+  return '';
+}
+function readLead(){
+  S.lead=S.lead||{name:'',email:'',phone:'',business:'',consent:false};
+  function v(id,max){ var el=document.getElementById(id); return el?String(el.value||'').trim().slice(0,max):''; }
+  S.lead.name=v('scan-name',80);
+  S.lead.email=v('scan-email',120);
+  S.lead.phone=v('scan-phone',40);
+  S.lead.business=v('scan-biz',120);
+  var box=document.getElementById('scan-consent-box');
+  S.lead.consent=!!(box && box.checked);
+}
+function renderConsent(){
+  if(lblEl) lblEl.textContent=((IND[S.ind]||{}).name||'Scan')+' · your report';
+  if(progEl) progEl.style.width='100%';
+  var lead=S.lead||{name:'',email:'',phone:'',business:'',consent:false};
+  if(!lead.business){ var fromScan=(S.a&&(S.a.bizname||S.a.estname))||''; if(fromScan) lead.business=fromScan; }
+  var h='<div class="qwrap"><p class="qnum">Before your snapshot</p><h2 class="qtitle">Email the report, or just look?</h2>';
+  h+='<p class="qhelp">Your results show next either way. If you agree, we email the report to you and to NetArmored. Phone and business name are optional.</p>';
+  h+='<form id="scan-consent" novalidate>';
+  h+='<p class="hp" aria-hidden="true"><label>Company website<input id="scan-hp" name="company_website" type="text" tabindex="-1" autocomplete="off" value=""></label></p>';
+  h+='<div class="frow"><div class="field"><label for="scan-name">Your name *</label><input id="scan-name" name="name" type="text" autocomplete="name" maxlength="80" value="'+esc(lead.name)+'"><p class="err" id="err-name" role="alert">Please enter your name.</p></div>';
+  h+='<div class="field"><label for="scan-email">Email *</label><input id="scan-email" name="email" type="email" autocomplete="email" maxlength="120" value="'+esc(lead.email)+'"><p class="err" id="err-email" role="alert">Please enter a valid email address.</p></div></div>';
+  h+='<div class="frow"><div class="field"><label for="scan-phone">Phone<span class="opt-l">optional</span></label><input id="scan-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" value="'+esc(lead.phone)+'"><p class="err" id="err-phone" role="alert">Use digits, spaces, and + ( ) . - only.</p></div>';
+  h+='<div class="field"><label for="scan-biz">Business name<span class="opt-l">optional</span></label><input id="scan-biz" name="business" type="text" autocomplete="organization" maxlength="120" value="'+esc(lead.business)+'"></div></div>';
+  h+='<div class="field"><label class="ck"><input id="scan-consent-box" name="consent" type="checkbox"'+(lead.consent?' checked':'')+'>I agree to NetArmored emailing me this report and contacting me about it. *</label><p class="err" id="err-consent" role="alert">Please agree to the email, or choose Show results only.</p></div>';
+  h+='<div id="scan-turnstile"></div><p class="err" id="err-turnstile" role="alert">Please complete the spam check.</p>';
+  h+='<p class="err" id="err-send" role="alert"></p>';
+  h+='<p class="small muted" style="margin-top:14px">If you skip this step, your answers stay in this browser tab. If you agree, Cloudflare Workers AI may draft the summary from your answers, scores, and industry. It does not receive your name, email, phone, or business name. <a href="/privacy/">Privacy Notice</a>.</p>';
+  if(previewHost) h+='<p class="small muted scan-mail-preview">preview: emails are not sent from this preview</p>';
+  h+='<div class="scan-nav"><button type="button" class="btn btn-g" data-act="back"><span aria-hidden="true">\u2190</span> Back</button><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="btn btn-g" data-act="skip">Show results only</button><button type="submit" class="btn btn-p">Email my report <span class="arr" aria-hidden="true">\u2192</span></button></span></div>';
+  h+='</form></div>';
+  getBody().innerHTML=h;
+  getBody().querySelector('[data-act=back]').addEventListener('click',function(){ readLead(); S.dir=-1; S.step=S.fu?'fu':4; render(); });
+  getBody().querySelector('[data-act=skip]').addEventListener('click',function(){ readLead(); S.mail={state:'skipped'}; finish(); });
+  [['scan-name','err-name'],['scan-email','err-email'],['scan-phone','err-phone']].forEach(function(pair){
+    var el=document.getElementById(pair[0]);
+    if(el) el.addEventListener('input', function(){ var e=document.getElementById(pair[1]); if(e) e.classList.remove('on'); });
+  });
+  var consentBox=document.getElementById('scan-consent-box');
+  if(consentBox) consentBox.addEventListener('change', function(){ var e=document.getElementById('err-consent'); if(e && consentBox.checked) e.classList.remove('on'); });
+  getBody().querySelector('#scan-consent').addEventListener('submit',function(e){
+    e.preventDefault();
+    if(!validateLead()) return;
+    if(turnstileState==='failed' || turnstileLoadError){ showResultsWithoutEmail('The spam check could not load, so the report was not emailed. Your snapshot is below.'); return; }
+    if(turnstileKey && !turnstileToken){
+      var et=document.getElementById('err-turnstile');
+      if(et){ et.textContent='Please complete the spam check.'; et.classList.add('on'); }
+      var box=document.getElementById('scan-turnstile');
+      if(box && box.scrollIntoView) box.scrollIntoView({block:'center'});
+      return;
+    }
+    sendReport();
+  });
+  mountTurnstile();
+}
+function validateLead(){
+  readLead();
+  var name=document.getElementById('scan-name'), email=document.getElementById('scan-email'), phone=document.getElementById('scan-phone'), box=document.getElementById('scan-consent-box');
+  var ok=true, first=null;
+  function flag(id, bad, el){ var e=document.getElementById(id); if(e) e.classList.toggle('on', !!bad); if(bad){ ok=false; if(!first) first=el; } }
+  flag('err-name', !S.lead.name, name);
+  flag('err-email', !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(S.lead.email), email);
+  flag('err-phone', !!(S.lead.phone && !/^[0-9+().\-\s]+$/.test(S.lead.phone)), phone);
+  flag('err-consent', !(box && box.checked), box);
+  if(first && first.focus) first.focus();
+  return ok;
+}
+function showResultsWithoutEmail(message){
+  readLead();
+  S.mail={state:'failed', email:S.lead.email||'', message:message};
+  S.step='done';
+  render();
+}
+function mountTurnstile(){
+  if(!turnstileKey){ turnstileState='off'; return; }
+  turnstileState='loading';
+  function note(msg){
+    var et=document.getElementById('err-turnstile');
+    if(et){ et.textContent=msg; et.classList.add('on'); }
+  }
+  function markFailed(){
+    turnstileState='failed';
+    turnstileLoadError=true;
+    turnstileToken='';
+    note('The spam check could not load. Choose Email my report to see your results anyway. Nothing will be emailed until the check is available.');
+  }
+  function draw(){
+    var el=document.getElementById('scan-turnstile');
+    if(!el || !window.turnstile || typeof window.turnstile.render!=='function'){ markFailed(); return; }
+    try{
+      turnstileToken='';
+      /* Do not call turnstile.ready(). A script inserted from this page is async,
+         and Turnstile throws instead of rendering when ready() is used on an async tag. */
+      turnstileWidget=window.turnstile.render(el,{
+        sitekey:turnstileKey,
+        theme:'dark',
+        callback:function(tok){
+          turnstileToken=tok;
+          turnstileState='ready';
+          var e=document.getElementById('err-turnstile');
+          if(e) e.classList.remove('on');
+        },
+        'expired-callback':function(){ turnstileToken=''; if(turnstileState!=='failed') turnstileState='widget'; },
+        'error-callback':function(){ markFailed(); }
+      });
+      turnstileState='widget';
+    }catch(err){ markFailed(); }
+  }
+  if(window.turnstile && typeof window.turnstile.render==='function'){ draw(); return; }
+  var existing=document.getElementById('cf-turnstile-api');
+  if(existing){
+    if(existing.getAttribute('data-failed')==='1'){ markFailed(); return; }
+    existing.addEventListener('load', draw);
+    existing.addEventListener('error', markFailed);
+    return;
+  }
+  var s=document.createElement('script');
+  s.id='cf-turnstile-api';
+  s.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+  s.async=false;
+  s.onload=function(){ draw(); };
+  s.onerror=function(){ s.setAttribute('data-failed','1'); markFailed(); };
+  document.head.appendChild(s);
+  setTimeout(function(){ if(turnstileState==='loading') markFailed(); }, 8000);
+}
+function showWait(msg){
+  if(lblEl) lblEl.textContent='Building your snapshot';
+  if(progEl) progEl.style.width='100%';
+  getBody().innerHTML='<div class="qwrap" style="text-align:center;padding:40px 20px"><div class="thinking"><span></span><span></span><span></span></div><h2 class="qtitle">'+esc(msg)+'</h2><p class="qhelp">This usually takes a moment.</p></div>';
+}
+function backToConsent(msg){
+  S.step='consent';
+  render();
+  var e=document.getElementById('err-send');
+  if(e){ e.textContent=msg; e.classList.add('on'); }
+}
+function sendReport(){
+  var hp=document.getElementById('scan-hp');
+  var payload={
+    company_website: hp?hp.value:'',
+    turnstileToken: turnstileToken||'',
+    consent: true,
+    contact:{ name:S.lead.name, email:S.lead.email, phone:S.lead.phone, business:S.lead.business },
+    scan:{ industry:S.ind, answers:S.a, followUp:S.fu, followUpAnswer:S.fuA }
+  };
+  showWait('Sending your report');
+  var ctrl=typeof AbortController==='function'?new AbortController():null;
+  var timer=setTimeout(function(){ if(ctrl) ctrl.abort(); }, 12000);
+  fetch(apiBase()+'api/scan-report',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Accept':'application/json'},
+    credentials:'same-origin',
+    body:JSON.stringify(payload),
+    signal:ctrl?ctrl.signal:undefined
+  }).then(function(r){
+    return r.json().then(function(j){ return {status:r.status, json:j}; }).catch(function(){ return {status:r.status, json:null}; });
+  }).then(function(res){
+    clearTimeout(timer);
+    if(res.json && res.json.sent){ S.mail={state:'sent', email:S.lead.email}; S.step='done'; render(); return; }
+    if(res.status===400){ backToConsent('Please check the required fields and try again.'); return; }
+    if(res.status===403){ S.mail={state:'failed', email:S.lead.email, message:'The spam check did not pass, so the report was not emailed. Your snapshot is below.'}; S.step='done'; render(); return; }
+    if(res.status===429){ backToConsent('Too many attempts from this network. You can show your results without email.'); return; }
+    S.mail={state:previewHost?'preview':'failed', email:S.lead.email}; S.step='done'; render();
+  }).catch(function(){
+    clearTimeout(timer);
+    S.mail={state:previewHost?'preview':'failed', email:S.lead.email}; S.step='done'; render();
+  });
 }
 function finish(){
-  S.step='think'; if(lblEl) lblEl.textContent='Building your snapshot'; setTop(5,5); if(progEl) progEl.style.width='100%';
-  getBody().innerHTML='<div class="qwrap" style="text-align:center;padding:40px 20px"><div class="thinking"><span></span><span></span><span></span></div><h2 class="qtitle">Building your snapshot</h2><p class="qhelp">Matching your answers to practical opportunities. This stays in your browser \u2014 nothing is sent.</p></div>';
+  S.step='think'; if(lblEl) lblEl.textContent='Building your snapshot'; if(progEl) progEl.style.width='100%';
+  getBody().innerHTML='<div class="qwrap" style="text-align:center;padding:40px 20px"><div class="thinking"><span></span><span></span><span></span></div><h2 class="qtitle">Building your snapshot</h2><p class="qhelp">Matching your answers to practical opportunities.</p></div>';
   setTimeout(function(){ S.step='done'; render(); }, RM?100:900);
 }
 function renderDone(){
+  if(lblEl) lblEl.textContent=((IND[S.ind]||{}).name||'Scan')+' · snapshot';
+  if(progEl) progEl.style.width='100%';
   var res=pick(), tiers=res.tiers, ind=res.ind;
   var h='<div class="qwrap"><p class="qnum">Your AI Opportunity Snapshot</p><h2 class="qtitle">Here\u2019s what fits '+esc(IND[ind].short)+'</h2><p class="qhelp">A practical starting point based on your answers. Starred priorities are weighted higher.</p>';
+  h+=mailBanner();
   var labels={quick:'Quick win',integ:'Integration opportunity',long:'Longer-term roadmap'};
   ['quick','integ','long'].forEach(function(tier){
     var list=tiers[tier];
@@ -293,12 +478,44 @@ function renderDone(){
     });
     h+='</div>';
   });
-  h+='<div class="snap-actions"><button type="button" class="btn btn-p" data-act="dl">Download my snapshot</button><button type="button" class="btn btn-g" data-act="print">Print / save as PDF</button><a class="btn btn-g" href="/contact/?source=scan-detailed-assessment">Request a detailed assessment</a><a class="btn btn-g" href="/contact/?source=scan-consultation">Schedule a discovery consultation</a><a class="btn btn-g" href="/contact/?source=scan-implementation">Discuss implementation priorities</a><button type="button" class="btn btn-g" data-act="restart">Start over</button></div>';
+  h+='<div class="snap-actions"><button type="button" class="btn btn-p" data-act="dl">Download my snapshot</button><button type="button" class="btn btn-g" data-act="print">Print / save as PDF</button><a class="btn btn-g" href="'+esc(apptHref('scan-detailed-assessment'))+'">Request a detailed assessment</a><a class="btn btn-g" href="'+esc(apptHref('scan-consultation'))+'">Schedule a discovery consultation</a><a class="btn btn-g" href="'+esc(apptHref('scan-implementation'))+'">Discuss implementation priorities</a><button type="button" class="btn btn-g" data-act="restart">Start over</button></div>';
   h+='</div>';
   getBody().innerHTML=h;
   getBody().querySelector('[data-act=dl]').addEventListener('click',download);
   getBody().querySelector('[data-act=print]').addEventListener('click',function(){ window.print(); });
-  getBody().querySelector('[data-act=restart]').addEventListener('click',function(){ S={ind:S.ind,step:-1,a:{},fu:null,fuA:null,dir:-1}; render(); });
+  getBody().querySelector('[data-act=restart]').addEventListener('click',function(){ S={ind:S.ind,step:-1,a:{},fu:null,fuA:null,dir:-1,lead:{name:'',email:'',phone:'',business:'',consent:false},mail:null}; render(); });
+}
+function mailBanner(){
+  if(!S.mail) return '';
+  if(S.mail.message) return '<p class="mail-status warn">'+esc(S.mail.message)+'</p>';
+  if(S.mail.state==='sent') return '<p class="mail-status ok">Your report is on its way to '+esc(S.mail.email)+'. We sent a copy to NetArmored too.</p>';
+  if(S.mail.state==='preview') return '<p class="mail-status warn">preview: emails are not sent from this preview. Your snapshot is below, and nothing was sent.</p>';
+  if(S.mail.state==='failed') return '<p class="mail-status warn">We could not email the report just now. Your snapshot is below. You can still schedule a conversation, or email hello@netarmored.com.</p>';
+  if(S.mail.state==='skipped') return '<p class="mail-status">Nothing was emailed. Your snapshot is only on this screen.</p>';
+  return '';
+}
+function shortClientSummary(){
+  var res=pick();
+  var bits=[];
+  ['quick','integ','long'].forEach(function(tier){ res.tiers[tier].forEach(function(x){ if(bits.length<2) bits.push(x.op.t); }); });
+  if(!bits.length) return 'AI Opportunity Scan. A short conversation would help choose a first step.';
+  return ('AI Opportunity Scan. Start with '+bits[0]+(bits[1]?', then '+bits[1]:'')+'.').slice(0,280);
+}
+function apptHref(source){
+  var lead=S.lead||{};
+  var biz=lead.business||(S.a&&(S.a.bizname||S.a.estname))||'';
+  if(window.NABooking){
+    return window.NABooking.build({
+      source:source,
+      name:lead.name||'',
+      email:lead.email||'',
+      business:biz,
+      phone:lead.phone||'',
+      industry:window.NABooking.label(effInd()),
+      summary:shortClientSummary()
+    });
+  }
+  return '/contact/?source='+encodeURIComponent(source);
 }
 function download(){
   var res=pick();
@@ -306,10 +523,24 @@ function download(){
   ['quick','integ','long'].forEach(function(tier){
     res.tiers[tier].forEach(function(x){ text+=x.op.t+'\n'+x.op.b+'\n\n'; });
   });
-  text+='Generated in your browser. Nothing was sent or stored.\n';
+  text+=(S.mail&&S.mail.state==='sent')?'A copy was emailed to you and to NetArmored.\n':'This copy was not emailed.\n';
   var blob=new Blob([text],{type:'text/plain'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='netarmored-ai-snapshot.txt'; a.click();
 }
+function loadMailConfig(){
+  if(previewHost) return;
+  fetch(apiBase()+'api/scan-config',{headers:{'Accept':'application/json'},credentials:'same-origin'})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(j){ if(j && j.turnstileSiteKey && !/placeholder/i.test(j.turnstileSiteKey)) turnstileKey=j.turnstileSiteKey; })
+    .catch(function(){});
+}
+function showPreviewNotice(){
+  if(!previewHost) return;
+  var n=document.getElementById('scan-mail-preview');
+  if(n) n.hidden=false;
+}
+loadMailConfig();
+showPreviewNotice();
 render();
 window.__naScan={S:S,build:pick};
 })();

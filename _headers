@@ -1,0 +1,15 @@
+# Cloudflare Pages headers. GitHub Pages ignores this file.
+# CSP matches the live site, plus the hosts Turnstile actually uses.
+# api.js is loaded from challenges.cloudflare.com. The challenge itself
+# is fetched from a subdomain such as brunhild.challenges.cloudflare.com,
+# so script-src, frame-src, and connect-src allow that host as well.
+# https://developers.cloudflare.com/turnstile/reference/content-security-policy/
+# If a dashboard Transform Rule still sends the old CSP, remove it or
+# update it in place. Browsers enforce every CSP they receive.
+
+/*
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: https://challenges.cloudflare.com https://*.challenges.cloudflare.com; media-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' https://challenges.cloudflare.com https://*.challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com https://*.challenges.cloudflare.com; frame-src https://challenges.cloudflare.com https://*.challenges.cloudflare.com; form-action 'self'; frame-ancestors 'none'; base-uri 'self'
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
