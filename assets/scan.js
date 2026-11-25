@@ -162,8 +162,7 @@ function pickFollowUp(){
 }
 
 /* ---------------- UI ---------------- */
-console.log('SCAN INIT: scan-body exists?', !!document.querySelector('.scan-body'), 'shell?', !!document.querySelector('.scan-shell'));
-var body=(function(){
+function getBody(){
   var b=document.querySelector('.scan-body');
   if(b) return b;
   var shell=document.querySelector('.scan-shell');
@@ -173,9 +172,9 @@ var body=(function(){
   }
   b=shell.querySelector('.scan-body');
   if(!b){ b=document.createElement('div'); b.className='scan-body'; shell.appendChild(b); }
-  console.log('SCAN BODY RESOLVED TO:', b, b===root?'ROOT':'NOT ROOT', b.className);
-return b;
-})();
+  return b;
+}
+var body=getBody();
 var lblEl=document.getElementById('scan-lbl')||document.querySelector('.scan-top .lbl');
 var progEl=document.getElementById('scan-prog')||document.querySelector('.scan-top .prog span');
 var first=true;
@@ -186,7 +185,7 @@ function setTop(step,total){
   progEl.style.width=pct+'%';
 }
 function focusTitle(){
-  var t=body.querySelector('.qtitle'); if(t){ t.setAttribute('tabindex','-1'); t.focus(); }
+  var t=getBody().querySelector('.qtitle'); if(t){ t.setAttribute('tabindex','-1'); t.focus(); }
 }
 function render(){
   if(S.step===-1) renderTrack();
@@ -200,8 +199,8 @@ function render(){
 function renderTrack(){
   var keys=['hospitality','restaurant','retail','professional','logistics','home','healthcare','general'];
   var desc={hospitality:'Bars, restaurants, venues with or without gaming',restaurant:'Restaurants and bars (no gaming focus)',retail:'Stores, convenience, specialty retail',professional:'Agencies, firms, consultants',logistics:'Delivery, freight, transportation',home:'Contractors, home services, field ops',healthcare:'Practices and healthcare admin (non-clinical)',general:'Other small businesses'};
-  body.innerHTML='<div class="qwrap"><p class="qnum">Before we begin</p><h2 class="qtitle">Which scan fits your business?</h2><p class="qhelp">Every scan uses the same five-question structure, with examples and recommendations adapted to the industry.</p><div class="track-pick" role="radiogroup" aria-label="Scan type">'+keys.map(function(k){return '<label class="ans"><input type="radio" name="track" value="'+k+'"'+(S.ind===k?' checked':'')+'><span class="box" aria-hidden="true"></span><span><b>'+esc(IND[k].name)+(k==='hospitality'?' \u2605':'')+'</b><span class="d">'+esc(desc[k])+'</span></span></label>';}).join('')+'</div><p class="err" id="err-track" role="alert">Please choose a scan to continue.</p><div class="scan-nav"><span></span><button type="button" class="btn btn-p" data-act="begin">Begin scan <span class="arr" aria-hidden="true">\u2192</span></button></div></div>';
-  body.querySelector('[data-act=begin]').addEventListener('click',function(){ var c=body.querySelector('input[name=track]:checked'); if(!c){ var e=document.getElementById('err-track'); e.classList.add('on'); body.querySelector('input[name=track]').focus(); return;} if(c.value!==S.ind){ S.a={}; S.fu=null; S.fuA=null; } S.ind=c.value; S.step=0; S.dir=1; render(); });
+  getBody().innerHTML='<div class="qwrap"><p class="qnum">Before we begin</p><h2 class="qtitle">Which scan fits your business?</h2><p class="qhelp">Every scan uses the same five-question structure, with examples and recommendations adapted to the industry.</p><div class="track-pick" role="radiogroup" aria-label="Scan type">'+keys.map(function(k){return '<label class="ans"><input type="radio" name="track" value="'+k+'"'+(S.ind===k?' checked':'')+'><span class="box" aria-hidden="true"></span><span><b>'+esc(IND[k].name)+(k==='hospitality'?' \u2605':'')+'</b><span class="d">'+esc(desc[k])+'</span></span></label>';}).join('')+'</div><p class="err" id="err-track" role="alert">Please choose a scan to continue.</p><div class="scan-nav"><span></span><button type="button" class="btn btn-p" data-act="begin">Begin scan <span class="arr" aria-hidden="true">\u2192</span></button></div></div>';
+  getBody().querySelector('[data-act=begin]').addEventListener('click',function(){ var c=getBody().querySelector('input[name=track]:checked'); if(!c){ var e=document.getElementById('err-track'); e.classList.add('on'); getBody().querySelector('input[name=track]').focus(); return;} if(c.value!==S.ind){ S.a={}; S.fu=null; S.fuA=null; } S.ind=c.value; S.step=0; S.dir=1; render(); });
 }
 function renderQ(){
   var qs=questions(), q=qs[S.step], total=5, n=S.step+1;
@@ -217,9 +216,9 @@ function renderQ(){
   if(q.text){ h+='<div class="field"><label for="x-text">'+esc(q.text)+'</label><textarea id="x-text" maxlength="500">'+esc(S.a[q.id+'_text']||'')+'</textarea></div>'; }
   if(q.id==='systems'||q.id==='tech') h+='<p class="small muted" style="margin-top:14px">Please don\u2019t enter passwords, account numbers, customer records'+(S.ind==='hospitality'?', patron gambling history or gaming-system details':'')+'.</p>';
   h+='<div class="scan-nav"><button type="button" class="btn btn-g" data-act="back"><span aria-hidden="true">\u2190</span> Back</button><button type="button" class="btn btn-p" data-act="next">'+(n===total?'Continue':'Next')+' <span class="arr" aria-hidden="true">\u2192</span></button></div></div>';
-  body.innerHTML=h;
+  getBody().innerHTML=h;
   if(multi){
-    var stars=body.querySelectorAll('.star-btn');
+    var stars=getBody().querySelectorAll('.star-btn');
     function syncStars(){
       stars.forEach(function(s){
         var inp=s.parentElement.querySelector('input');
@@ -237,7 +236,7 @@ function renderQ(){
         syncStars();
       });
     });
-    body.querySelectorAll('input[name=q]').forEach(function(i){
+    getBody().querySelectorAll('input[name=q]').forEach(function(i){
       i.addEventListener('change',function(){
         if(!i.checked && S.a[q.id+'_star']===i.value) S.a[q.id+'_star']=null;
         syncStars();
@@ -245,39 +244,39 @@ function renderQ(){
     });
     syncStars();
   }
-  if(q.exclusive){ body.querySelectorAll('input[name=q]').forEach(function(i){ i.addEventListener('change',function(){ if(!i.checked) return; body.querySelectorAll('input[name=q]').forEach(function(j){ if(i.value===q.exclusive && j!==i) j.checked=false; if(i.value!==q.exclusive && j.value===q.exclusive) j.checked=false; }); }); }); }
-  if(!multi && !q.readiness && !q.extra && !q.text){ body.querySelectorAll('input[name=q]').forEach(function(i){ i.addEventListener('change',function(){ setTimeout(next, RM?0:240); }); }); }
-  body.querySelector('[data-act=back]').addEventListener('click',function(){ save(q); S.dir=-1; if(S.step===0){ S.step=-1; } else S.step--; render(); });
-  body.querySelector('[data-act=next]').addEventListener('click',next);
+  if(q.exclusive){ getBody().querySelectorAll('input[name=q]').forEach(function(i){ i.addEventListener('change',function(){ if(!i.checked) return; getBody().querySelectorAll('input[name=q]').forEach(function(j){ if(i.value===q.exclusive && j!==i) j.checked=false; if(i.value!==q.exclusive && j.value===q.exclusive) j.checked=false; }); }); }); }
+  if(!multi && !q.readiness && !q.extra && !q.text){ getBody().querySelectorAll('input[name=q]').forEach(function(i){ i.addEventListener('change',function(){ setTimeout(next, RM?0:240); }); }); }
+  getBody().querySelector('[data-act=back]').addEventListener('click',function(){ save(q); S.dir=-1; if(S.step===0){ S.step=-1; } else S.step--; render(); });
+  getBody().querySelector('[data-act=next]').addEventListener('click',next);
   function next(){ if(!save(q,true)) return; S.dir=1; if(S.step<total-1){ S.step++; render(); } else { S.fu=pickFollowUp(); if(S.fu){ S.step='fu'; render(); } else finish(); } }
 }
 function save(q,validate){
-  var multi=q.type==='multi', ins=[].slice.call(body.querySelectorAll('input[name=q]:checked')).map(function(i){return i.value;});
+  var multi=q.type==='multi', ins=[].slice.call(getBody().querySelectorAll('input[name=q]:checked')).map(function(i){return i.value;});
   S.a[q.id]=multi?ins:(ins[0]||null);
   if(multi){
-    var starBtn=body.querySelector('.star-btn.on');
+    var starBtn=getBody().querySelector('.star-btn.on');
     S.a[q.id+'_star']=starBtn ? starBtn.dataset.val : (S.a[q.id+'_star']||null);
     if(S.a[q.id+'_star'] && ins.indexOf(S.a[q.id+'_star'])===-1) S.a[q.id+'_star']=null;
   }
   (q.extra||[]).forEach(function(x){ var el=document.getElementById('x-'+x[0]); if(el) S.a[x[0]]=el.value.trim().slice(0,120); });
   var tx=document.getElementById('x-text'); if(tx) S.a[q.id+'_text']=tx.value.trim().slice(0,500);
-  var r=body.querySelector('input[name=ready]:checked'); if(q.readiness) S.a.ready=r?r.value:S.a.ready;
+  var r=getBody().querySelector('input[name=ready]:checked'); if(q.readiness) S.a.ready=r?r.value:S.a.ready;
   if(!validate) return true;
   var ok=true, e=document.getElementById('err-q');
-  if(!ins.length){ e.classList.add('on'); body.querySelector('input[name=q]').focus(); ok=false; } else e.classList.remove('on');
-  if(ok && q.readiness && !r){ var er=document.getElementById('err-r'); er.classList.add('on'); body.querySelector('input[name=ready]').focus(); ok=false; }
+  if(!ins.length){ e.classList.add('on'); getBody().querySelector('input[name=q]').focus(); ok=false; } else e.classList.remove('on');
+  if(ok && q.readiness && !r){ var er=document.getElementById('err-r'); er.classList.add('on'); getBody().querySelector('input[name=ready]').focus(); ok=false; }
   return ok;
 }
 function renderFU(){
   var f=FU[S.fu]; if(lblEl) lblEl.textContent='One clarifying question'; setTop(5,5);
-  body.innerHTML='<div class="qwrap"><div class="followup" style="margin-top:0"><span class="tag">'+esc(f.tag)+'</span><h2 class="qtitle" id="fq">'+esc(f.title)+'</h2><p class="qhelp" style="margin-bottom:16px">Optional \u2014 it sharpens your snapshot. We only ask the single question most likely to change the recommendation.</p><div class="answers" role="radiogroup" aria-labelledby="fq">'+f.opts.map(function(o){return '<label class="ans"><input type="radio" name="fu" value="'+o[0]+'"'+(S.fuA===o[0]?' checked':'')+'><span class="box" aria-hidden="true"></span><span><b>'+esc(o[1])+'</b></span></label>';}).join('')+'</div></div><div class="scan-nav"><button type="button" class="btn btn-g" data-act="back"><span aria-hidden="true">\u2190</span> Back</button><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="btn btn-g" data-act="skip">Skip</button><button type="button" class="btn btn-p" data-act="go">See my snapshot <span class="arr" aria-hidden="true">\u2192</span></button></span></div></div>';
-  body.querySelector('[data-act=back]').addEventListener('click',function(){ S.dir=-1; S.step=4; render(); });
-  body.querySelector('[data-act=skip]').addEventListener('click',function(){ S.fuA=null; finish(); });
-  body.querySelector('[data-act=go]').addEventListener('click',function(){ var c=body.querySelector('input[name=fu]:checked'); S.fuA=c?c.value:null; finish(); });
+  getBody().innerHTML='<div class="qwrap"><div class="followup" style="margin-top:0"><span class="tag">'+esc(f.tag)+'</span><h2 class="qtitle" id="fq">'+esc(f.title)+'</h2><p class="qhelp" style="margin-bottom:16px">Optional \u2014 it sharpens your snapshot. We only ask the single question most likely to change the recommendation.</p><div class="answers" role="radiogroup" aria-labelledby="fq">'+f.opts.map(function(o){return '<label class="ans"><input type="radio" name="fu" value="'+o[0]+'"'+(S.fuA===o[0]?' checked':'')+'><span class="box" aria-hidden="true"></span><span><b>'+esc(o[1])+'</b></span></label>';}).join('')+'</div></div><div class="scan-nav"><button type="button" class="btn btn-g" data-act="back"><span aria-hidden="true">\u2190</span> Back</button><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="btn btn-g" data-act="skip">Skip</button><button type="button" class="btn btn-p" data-act="go">See my snapshot <span class="arr" aria-hidden="true">\u2192</span></button></span></div></div>';
+  getBody().querySelector('[data-act=back]').addEventListener('click',function(){ S.dir=-1; S.step=4; render(); });
+  getBody().querySelector('[data-act=skip]').addEventListener('click',function(){ S.fuA=null; finish(); });
+  getBody().querySelector('[data-act=go]').addEventListener('click',function(){ var c=getBody().querySelector('input[name=fu]:checked'); S.fuA=c?c.value:null; finish(); });
 }
 function finish(){
   S.step='think'; if(lblEl) lblEl.textContent='Building your snapshot'; setTop(5,5); if(progEl) progEl.style.width='100%';
-  body.innerHTML='<div class="qwrap" style="text-align:center;padding:40px 20px"><div class="thinking"><span></span><span></span><span></span></div><h2 class="qtitle">Building your snapshot</h2><p class="qhelp">Matching your answers to practical opportunities. This stays in your browser \u2014 nothing is sent.</p></div>';
+  getBody().innerHTML='<div class="qwrap" style="text-align:center;padding:40px 20px"><div class="thinking"><span></span><span></span><span></span></div><h2 class="qtitle">Building your snapshot</h2><p class="qhelp">Matching your answers to practical opportunities. This stays in your browser \u2014 nothing is sent.</p></div>';
   setTimeout(function(){ S.step='done'; render(); }, RM?100:900);
 }
 function renderDone(){
@@ -296,10 +295,10 @@ function renderDone(){
   });
   h+='<div class="snap-actions"><button type="button" class="btn btn-p" data-act="dl">Download my snapshot</button><button type="button" class="btn btn-g" data-act="print">Print / save as PDF</button><a class="btn btn-g" href="/contact/?source=scan-detailed-assessment">Request a detailed assessment</a><a class="btn btn-g" href="/contact/?source=scan-consultation">Schedule a discovery consultation</a><a class="btn btn-g" href="/contact/?source=scan-implementation">Discuss implementation priorities</a><button type="button" class="btn btn-g" data-act="restart">Start over</button></div>';
   h+='</div>';
-  body.innerHTML=h;
-  body.querySelector('[data-act=dl]').addEventListener('click',download);
-  body.querySelector('[data-act=print]').addEventListener('click',function(){ window.print(); });
-  body.querySelector('[data-act=restart]').addEventListener('click',function(){ S={ind:S.ind,step:-1,a:{},fu:null,fuA:null,dir:-1}; render(); });
+  getBody().innerHTML=h;
+  getBody().querySelector('[data-act=dl]').addEventListener('click',download);
+  getBody().querySelector('[data-act=print]').addEventListener('click',function(){ window.print(); });
+  getBody().querySelector('[data-act=restart]').addEventListener('click',function(){ S={ind:S.ind,step:-1,a:{},fu:null,fuA:null,dir:-1}; render(); });
 }
 function download(){
   var res=pick();
