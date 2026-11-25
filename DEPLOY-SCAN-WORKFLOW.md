@@ -39,7 +39,7 @@ Use the existing Pages project for a **preview deployment** of this branch befor
 
 ## 2. Environment variables and secrets
 
-Set these in the Pages dashboard (Settings → Variables and secrets) for **both Preview and Production**. `wrangler.toml` only holds placeholders so this public repo never contains a real key.
+Set these in the Pages dashboard (Settings → Variables and secrets) for **both Preview and Production**. Do not put `TURNSTILE_SITE_KEY` in `wrangler.toml`. A deploy uploads `[vars]` from that file and would replace the real site key.
 
 | Name | Kind | Value |
 | --- | --- | --- |

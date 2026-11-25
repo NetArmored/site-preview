@@ -11,9 +11,9 @@ pages_build_output_dir = "."
 [ai]
 binding = "AI"
 
-# Non-secret settings. Replace TURNSTILE_SITE_KEY in the Pages dashboard
-# for Production and for Preview. The placeholder disables the widget.
+# Non-secret settings. The Turnstile site key is set in the Pages project
+# (Preview and Production). It is not stored in this file, because a deploy
+# would otherwise overwrite the real key with a placeholder.
 [vars]
-TURNSTILE_SITE_KEY = "TURNSTILE_SITE_KEY_PLACEHOLDER"
 AI_MODEL = "@cf/meta/llama-3.2-3b-instruct"
 SITE_ORIGIN = "https://www.netarmored.com"
