@@ -293,7 +293,7 @@ function renderDone(){
     });
     h+='</div>';
   });
-  h+='<div class="snap-actions"><button type="button" class="btn btn-p" data-act="dl">Download my snapshot</button><button type="button" class="btn btn-g" data-act="print">Print / save as PDF</button><a class="btn btn-g" href="/contact/?source=scan-detailed-assessment">Request a detailed assessment</a><a class="btn btn-g" href="/contact/?source=scan-consultation">Schedule a discovery consultation</a><a class="btn btn-g" href="/contact/?source=scan-implementation">Discuss implementation priorities</a><button type="button" class="btn btn-g" data-act="restart">Start over</button></div>';
+  h+='<div class="snap-actions"><button type="button" class="btn btn-p" data-act="dl">Download my snapshot</button><button type="button" class="btn btn-g" data-act="print">Print / save as PDF</button><a class="btn btn-g" href="/contact/?source=scan-consultation">Schedule a discovery consultation</a><button type="button" class="btn btn-g" data-act="restart">Start over</button></div>';
   h+='</div>';
   getBody().innerHTML=h;
   getBody().querySelector('[data-act=dl]').addEventListener('click',download);

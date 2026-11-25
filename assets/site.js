@@ -188,14 +188,23 @@ $$('form[data-contact-form], form[data-demo]').forEach(function(f){
       } else if(btn){ btn.disabled=false; }
     }
     if(isPreview){
-      // Preview has no mailer — open a pre-filled mailto so the request can still be sent
       var fd=new FormData(f), lines=[];
       fd.forEach(function(v,k){ if(k!=='company_website' && v) lines.push(k+': '+v); });
-      var subject=encodeURIComponent('NetArmored consultation request');
-      var bodyTxt=encodeURIComponent(lines.join('\n'));
-      var mailto='mailto:hello@netarmored.com?subject='+subject+'&body='+bodyTxt;
-      try{ window.location.href=mailto; }catch(e){}
+      var plain=lines.join('\n');
+      // Try mailto, but also give a copy option in case the mail client fails
+      try{ window.location.href='mailto:hello@netarmored.com?subject='+encodeURIComponent('NetArmored consultation request')+'&body='+encodeURIComponent(plain); }catch(e){}
       showResult('preview');
+      // Add a copy button to the preview box
+      var box=$('.form-result[data-result="preview"].on');
+      if(box && !box.querySelector('.copy-btn')){
+        var btn2=document.createElement('button');
+        btn2.type='button'; btn2.className='btn btn-g copy-btn'; btn2.style.marginTop='12px';
+        btn2.textContent='Copy request details';
+        btn2.addEventListener('click',function(){
+          navigator.clipboard.writeText(plain).then(function(){ btn2.textContent='Copied'; }).catch(function(){ btn2.textContent='Select and copy manually'; });
+        });
+        box.appendChild(btn2);
+      }
       return;
     }
     var body=new FormData(f);
