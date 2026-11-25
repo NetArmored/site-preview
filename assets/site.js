@@ -168,6 +168,52 @@ var toc=$('.toc');
 if(toc && 'IntersectionObserver' in window){ var links=$$('a',toc); var spy=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ links.forEach(function(l){ l.classList.toggle('on', l.getAttribute('href')==='#'+e.target.id); }); } }); },{rootMargin:'-30% 0px -60% 0px'}); links.forEach(function(l){ var t=d.getElementById(l.getAttribute('href').slice(1)); if(t) spy.observe(t); }); }
 
 /* ---------- Contact form: validate, then POST to /api/contact ---------- */
+function siteRoot(){
+  var scripts=d.getElementsByTagName('script');
+  for(var i=0;i<scripts.length;i++){
+    var src=scripts[i].src||'';
+    var m=src.match(/^(.*)assets\/site\.js(?:\?.*)?$/);
+    if(m) return m[1];
+  }
+  return '';
+}
+var contactTurnstileToken='', contactTurnstileState='off';
+function mountContactTurnstile(key){
+  if(!key) return;
+  contactTurnstileState='loading';
+  function markFailed(){ contactTurnstileState='failed'; contactTurnstileToken=''; }
+  function draw(){
+    var el=d.getElementById('contact-turnstile');
+    if(!el || !window.turnstile || typeof window.turnstile.render!=='function'){ markFailed(); return; }
+    try{
+      contactTurnstileToken='';
+      window.turnstile.render(el,{
+        sitekey:key,
+        theme:'dark',
+        callback:function(tok){ contactTurnstileToken=tok; contactTurnstileState='ready'; var e=d.getElementById('e-turnstile'); if(e) e.classList.remove('on'); },
+        'expired-callback':function(){ contactTurnstileToken=''; if(contactTurnstileState!=='failed') contactTurnstileState='widget'; },
+        'error-callback':function(){ markFailed(); }
+      });
+      contactTurnstileState='widget';
+    }catch(err){ markFailed(); }
+  }
+  if(window.turnstile && typeof window.turnstile.render==='function'){ draw(); return; }
+  var existing=d.getElementById('cf-turnstile-api');
+  if(existing){ existing.addEventListener('load', draw); existing.addEventListener('error', markFailed); return; }
+  var s=d.createElement('script');
+  s.id='cf-turnstile-api';
+  s.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+  s.async=false;
+  s.onload=function(){ draw(); };
+  s.onerror=function(){ markFailed(); };
+  d.head.appendChild(s);
+}
+if(d.querySelector('form[data-contact-form]')){
+  fetch(siteRoot()+'api/scan-config',{headers:{'Accept':'application/json'},credentials:'same-origin'})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(j){ if(j && j.turnstileSiteKey && !/placeholder/i.test(j.turnstileSiteKey)) mountContactTurnstile(j.turnstileSiteKey); })
+    .catch(function(){});
+}
 $$('form[data-contact-form], form[data-demo]').forEach(function(f){
   var src=$('[name=lead_source]',f); if(src){ var q=new URLSearchParams(location.search).get('source'); if(q) src.value=q.replace(/[^a-z0-9-]/gi,'').slice(0,40); var sv=$('[data-source-view]',f); if(sv) sv.textContent=src.value; }
   if(f.hasAttribute('data-contact-form')){
@@ -211,10 +257,19 @@ $$('form[data-contact-form], form[data-demo]').forEach(function(f){
     $$('[data-req]',f).forEach(function(el){ var v=el.type==='checkbox'?el.checked:(el.value||'').trim(); var bad=!v; if(!bad && el.type==='email') bad=!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(el.value.trim());
       el.setAttribute('aria-invalid',bad); var er=d.getElementById(el.getAttribute('aria-describedby')||''); if(er && er.classList.contains('err')) er.classList.toggle('on',bad); if(bad){ ok=false; if(!first) first=el; } });
     if(!ok){ if(first) first.focus(); return; }
+    if(f.hasAttribute('data-contact-form') && (contactTurnstileState==='widget' || contactTurnstileState==='ready') && !contactTurnstileToken){
+      var spam=d.getElementById('e-turnstile');
+      if(spam) spam.classList.add('on');
+      var widget=d.getElementById('contact-turnstile');
+      if(widget && widget.scrollIntoView) widget.scrollIntoView({block:'center'});
+      return;
+    }
     var btn=$('button[type=submit]',f);
     if(btn) btn.disabled=true;
     var body=new FormData(f);
-    fetch(f.getAttribute('action')||'/api/contact',{method:'POST',body:body,credentials:'same-origin',headers:{'Accept':'application/json'}})
+    if(contactTurnstileToken) body.set('cf-turnstile-response', contactTurnstileToken);
+    var action=f.hasAttribute('data-contact-form') ? siteRoot()+'api/contact' : (f.getAttribute('action')||'/api/contact');
+    fetch(action,{method:'POST',body:body,credentials:'same-origin',headers:{'Accept':'application/json'}})
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, status:r.status, json:j}; }).catch(function(){ return {ok:r.ok, status:r.status, json:{}}; }); })
       .then(function(res){
         var kind='error';

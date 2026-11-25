@@ -463,8 +463,8 @@ details.assume ul{margin:12px 0 0;padding-left:18px;font-size:.88rem;color:var(-
 .mail-status{margin:0 0 18px;padding:14px 16px;border-radius:12px;border:1px solid var(--line2);background:rgba(11,20,36,.35);color:#C9D5E4;font-size:.92rem}
 .mail-status.ok{border-color:rgba(45,212,191,.45);background:rgba(45,212,191,.08);color:#D7F6F1}
 .mail-status.warn{border-color:rgba(242,201,138,.45);background:rgba(242,201,138,.07);color:#F6E3C4}
-#scan-turnstile{margin-top:16px;min-height:0}
-#scan-turnstile iframe{max-width:100%}
+#scan-turnstile,#contact-turnstile{margin-top:16px;min-height:0}
+#scan-turnstile iframe,#contact-turnstile iframe{max-width:100%}
 #scan-consent .scan-nav{align-items:center}
 .scan-mail-preview{margin-top:8px}
 @media (max-width:640px){

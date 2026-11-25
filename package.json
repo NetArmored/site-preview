@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test test/scan-report.test.js"
+    "test": "node --test test/scan-report.test.js test/contact.test.js"
   }
 }
