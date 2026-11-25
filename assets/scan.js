@@ -206,8 +206,8 @@ function renderQ(){
   var qs=questions(), q=qs[S.step], total=5, n=S.step+1;
   if(lblEl) lblEl.textContent=(S.ind==='hospitality'?'Hospitality scan':IND[S.ind].name+' scan')+' \u00b7 '+n+' of '+total; setTop(S.step,total);
   var cur=S.a[q.id], multi=q.type==='multi';
-  var h='<div class="qwrap'+(S.dir<0?' back':'')+'"><p class="qnum">'+(S.ind==='hospitality'?'Discovery \u2014 ':'')+'Question '+n+' of '+total+'</p><h2 class="qtitle" id="qt">'+esc(q.title)+'</h2><p class="qhelp">'+esc(q.help&&q.help.indexOf('Discovery')===0?'Pick the closest fit.':q.help||'')+'</p>';
   if(multi && q.help && q.help.indexOf('star')===-1) q.help = (q.help||'') + ' Select all that apply, then star \u2605 the most important one.';
+  var h='<div class="qwrap'+(S.dir<0?' back':'')+'"><p class="qnum">'+(S.ind==='hospitality'?'Discovery \u2014 ':'')+'Question '+n+' of '+total+'</p><h2 class="qtitle" id="qt">'+esc(q.title)+'</h2><p class="qhelp">'+esc(q.help&&q.help.indexOf('Discovery')===0?'Pick the closest fit.':q.help||'')+'</p>';
   h+='<div class="answers" role="'+(multi?'group':'radiogroup')+'" aria-labelledby="qt">';
   q.opts.forEach(function(o){ var on=multi?has(cur||[],o[0]):cur===o[0]; var starred=multi && S.a[q.id+'_star']===o[0]; h+='<label class="ans'+(multi?' multi':'')+'"><input type="'+(multi?'checkbox':'radio')+'" name="q" value="'+o[0]+'"'+(on?' checked':'')+'><span class="box" aria-hidden="true"></span><span><b>'+esc(o[1])+'</b>'+(o[2]?'<span class="d">'+esc(o[2])+'</span>':'')+'</span>'+(multi?'<button type="button" class="star-btn'+(starred?' on':'')+'" data-val="'+o[0]+'" aria-label="Mark as most important" '+(on?'':'disabled')+'>\u2605</button>':'')+'</label>'; });
   h+='</div><p class="err" id="err-q" role="alert">'+(multi?'Select at least one option.':'Please choose an option.')+'</p>';
