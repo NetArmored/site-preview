@@ -177,6 +177,27 @@ $$('form[data-contact-form], form[data-demo]').forEach(function(f){
     if(!ok){ if(first) first.focus(); return; }
     var btn=$('button[type=submit]',f);
     if(btn) btn.disabled=true;
+    var isPreview = location.hostname.indexOf('github.io')>-1 || location.hostname.indexOf('pages.dev')>-1;
+    function showResult(kind){
+      var box=$('.form-result[data-result="'+kind+'"]',f.parentNode) || $('.form-result[data-result="'+kind+'"]',f.parentNode.parentNode);
+      if(!box){ box=$('.form-result[data-result="'+kind+'"]'); }
+      $$('.form-result', f.parentNode.parentNode||f.parentNode).forEach(function(el){ el.classList.remove('on'); });
+      if(box){ box.classList.add('on'); box.setAttribute('tabindex','-1'); box.focus(); }
+      if(kind==='ok' || kind==='preview'){
+        $$('input,textarea,select,button[type=submit]',f).forEach(function(el){ el.disabled=true; });
+      } else if(btn){ btn.disabled=false; }
+    }
+    if(isPreview){
+      // Preview has no mailer — open a pre-filled mailto so the request can still be sent
+      var fd=new FormData(f), lines=[];
+      fd.forEach(function(v,k){ if(k!=='company_website' && v) lines.push(k+': '+v); });
+      var subject=encodeURIComponent('NetArmored consultation request');
+      var bodyTxt=encodeURIComponent(lines.join('\n'));
+      var mailto='mailto:hello@netarmored.com?subject='+subject+'&body='+bodyTxt;
+      try{ window.location.href=mailto; }catch(e){}
+      showResult('preview');
+      return;
+    }
     var body=new FormData(f);
     fetch(f.getAttribute('action')||'/api/contact',{method:'POST',body:body,credentials:'same-origin',headers:{'Accept':'application/json'}})
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, status:r.status, json:j}; }).catch(function(){ return {ok:r.ok, status:r.status, json:{}}; }); })
@@ -184,18 +205,17 @@ $$('form[data-contact-form], form[data-demo]').forEach(function(f){
         var kind='error';
         if(res.json && res.json.code==='mailer_not_connected') kind='preview';
         else if(res.ok && res.json && res.json.ok) kind='ok';
-        var box=$('.form-result[data-result="'+kind+'"]',f.parentNode) || $('.form-result[data-result="'+kind+'"]',f.parentNode.parentNode);
-        if(!box){ box=$('.form-result[data-result="'+kind+'"]'); }
-        $$('.form-result', f.parentNode.parentNode||f.parentNode).forEach(function(el){ el.classList.remove('on'); });
-        if(box){ box.classList.add('on'); box.setAttribute('tabindex','-1'); box.focus(); }
-        if(kind==='ok' || kind==='preview'){
-          $$('input,textarea,select,button[type=submit]',f).forEach(function(el){ el.disabled=true; });
-        } else if(btn){ btn.disabled=false; }
+        else if(!res.ok || (res.json && res.json.error==='forbidden')) kind='preview';
+        showResult(kind);
       })
       .catch(function(){
-        if(btn) btn.disabled=false;
-        var box=$('.form-result[data-result="error"]',f.parentNode.parentNode||f.parentNode);
-        if(box){ box.classList.add('on'); box.setAttribute('tabindex','-1'); box.focus(); }
+        // Network / CORS failure — fall back to mailto so the request can still be sent
+        var fd=new FormData(f), lines=[];
+        fd.forEach(function(v,k){ if(k!=='company_website' && v) lines.push(k+': '+v); });
+        var subject=encodeURIComponent('NetArmored consultation request');
+        var bodyTxt=encodeURIComponent(lines.join('\n'));
+        try{ window.location.href='mailto:hello@netarmored.com?subject='+subject+'&body='+bodyTxt; }catch(e){}
+        showResult('preview');
       });
   });
 });
