@@ -1,0 +1,14 @@
+# Cloudflare Pages headers. GitHub Pages ignores this file.
+# CSP matches the live site, plus the two hosts Turnstile documents:
+# script-src https://challenges.cloudflare.com
+# frame-src https://challenges.cloudflare.com
+# https://developers.cloudflare.com/turnstile/reference/content-security-policy/
+# If a dashboard Transform Rule still sends the old CSP, remove it or
+# update it in place. Browsers enforce every CSP they receive.
+
+/*
+  Content-Security-Policy: default-src 'self'; img-src 'self' data:; media-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' https://challenges.cloudflare.com; connect-src 'self'; frame-src https://challenges.cloudflare.com; form-action 'self'; frame-ancestors 'none'; base-uri 'self'
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY

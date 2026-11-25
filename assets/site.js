@@ -170,6 +170,42 @@ if(toc && 'IntersectionObserver' in window){ var links=$$('a',toc); var spy=new 
 /* ---------- Contact form: validate, then POST to /api/contact ---------- */
 $$('form[data-contact-form], form[data-demo]').forEach(function(f){
   var src=$('[name=lead_source]',f); if(src){ var q=new URLSearchParams(location.search).get('source'); if(q) src.value=q.replace(/[^a-z0-9-]/gi,'').slice(0,40); var sv=$('[data-source-view]',f); if(sv) sv.textContent=src.value; }
+  if(f.hasAttribute('data-contact-form')){
+    var qp=new URLSearchParams(location.search);
+    var labels={hospitality:'Hospitality, Restaurants, Bars & Entertainment',restaurant:'Restaurants (Without Gaming)',retail:'Retail & Convenience Stores',professional:'Professional Services',logistics:'Logistics & Transportation',home:'Home Services & Field Operations',healthcare:'Healthcare Administration',general:'General Small Business Operations'};
+    function fillNamed(field, value, keepBreaks){
+      if(value==null || !String(value).trim()) return false;
+      var el=f.querySelector('[name="'+field+'"]');
+      if(!el || el.type==='checkbox' || el.type==='radio' || el.type==='hidden') return false;
+      var v=String(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'');
+      if(!keepBreaks) v=v.replace(/[\r\n]+/g,' ');
+      v=v.trim();
+      if(el.maxLength>0 && v.length>el.maxLength) v=v.slice(0, el.maxLength);
+      if(el.tagName==='SELECT'){
+        var want=labels[v]||v, found=false;
+        for(var i=0;i<el.options.length;i++){ if(el.options[i].value===want || el.options[i].text===want){ el.selectedIndex=i; found=true; break; } }
+        return found;
+      }
+      el.value=v; return true;
+    }
+    var touched=false;
+    touched=fillNamed('name', qp.get('name'))||touched;
+    touched=fillNamed('email', qp.get('email'))||touched;
+    touched=fillNamed('biz', qp.get('business'))||touched;
+    touched=fillNamed('phone', qp.get('phone'))||touched;
+    touched=fillNamed('industry', qp.get('industry'))||touched;
+    touched=fillNamed('challenges', qp.get('summary'), true)||touched;
+    if(touched){
+      var consentBox=f.querySelector('[name=consent]');
+      if(consentBox) consentBox.checked=false;
+      var note=d.createElement('p');
+      note.className='small muted';
+      note.style.marginTop='10px';
+      note.textContent='Details from your AI Opportunity Scan are filled in below. The consent box is left unticked.';
+      var anchor=f.querySelector('[data-source-view]');
+      if(anchor && anchor.parentNode && anchor.parentNode.parentNode) anchor.parentNode.parentNode.insertBefore(note, anchor.parentNode);
+    }
+  }
   f.addEventListener('submit',function(e){
     e.preventDefault(); var ok=true, first=null;
     $$('[data-req]',f).forEach(function(el){ var v=el.type==='checkbox'?el.checked:(el.value||'').trim(); var bad=!v; if(!bad && el.type==='email') bad=!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(el.value.trim());

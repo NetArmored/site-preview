@@ -1,0 +1,19 @@
+# Cloudflare Pages project for netarmored.com.
+# This file is in a public repository. Do not put real keys here.
+# Secrets are set in the Pages dashboard or with `wrangler pages secret put`.
+# See DEPLOY-SCAN-WORKFLOW.md.
+
+name = "netarmored"
+compatibility_date = "2026-11-01"
+pages_build_output_dir = "."
+
+# Workers AI. The function calls env.AI. No separate API key.
+[ai]
+binding = "AI"
+
+# Non-secret settings. Replace TURNSTILE_SITE_KEY in the Pages dashboard
+# for Production and for Preview. The placeholder disables the widget.
+[vars]
+TURNSTILE_SITE_KEY = "TURNSTILE_SITE_KEY_PLACEHOLDER"
+AI_MODEL = "@cf/meta/llama-3.2-3b-instruct"
+SITE_ORIGIN = "https://www.netarmored.com"

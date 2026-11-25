@@ -460,6 +460,12 @@ details.assume ul{margin:12px 0 0;padding-left:18px;font-size:.88rem;color:var(-
 .ans.multi .star-btn:disabled{opacity:.18;pointer-events:none}
 .ans.multi .star-btn.on{color:#FFD700;opacity:1;text-shadow:0 0 10px rgba(255,215,0,.55)}
 .ans.multi .star-btn:active{transform:translateY(-50%) scale(.9)}
+.mail-status{margin:0 0 18px;padding:14px 16px;border-radius:12px;border:1px solid var(--line2);background:rgba(11,20,36,.35);color:#C9D5E4;font-size:.92rem}
+.mail-status.ok{border-color:rgba(45,212,191,.45);background:rgba(45,212,191,.08);color:#D7F6F1}
+.mail-status.warn{border-color:rgba(242,201,138,.45);background:rgba(242,201,138,.07);color:#F6E3C4}
+#scan-turnstile{margin-top:16px}
+#scan-consent .scan-nav{align-items:center}
+.scan-mail-preview{margin-top:8px}
 @media (max-width:640px){
   .ans{padding-right:56px}
   .ans.multi .star-btn{width:48px;height:48px;font-size:1.65rem;right:4px}
