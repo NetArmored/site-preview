@@ -80,7 +80,7 @@ var OV={
 /* ---------------- State ---------------- */
 var S={ind:null,step:-1,a:{},fu:null,fuA:null,dir:1,lead:{name:'',email:'',phone:'',business:'',consent:false},mail:null};
 var previewHost=/(^|\.)github\.io$/i.test(location.hostname);
-var turnstileKey=null, turnstileToken='', turnstileWidget=null;
+var turnstileKey=null, turnstileToken='', turnstileWidget=null, turnstileState='off', turnstileLoadError=false;
 var params=new URLSearchParams(location.search); var qi=params.get('industry');
 if(qi && IND[qi]){ S.ind=qi; S.step=0; }
 
@@ -331,7 +331,14 @@ function renderConsent(){
   getBody().querySelector('#scan-consent').addEventListener('submit',function(e){
     e.preventDefault();
     if(!validateLead()) return;
-    if(turnstileKey && !turnstileToken){ var et=document.getElementById('err-turnstile'); if(et) et.classList.add('on'); return; }
+    if(turnstileState==='failed' || turnstileLoadError){ showResultsWithoutEmail('The spam check could not load, so the report was not emailed. Your snapshot is below.'); return; }
+    if(turnstileKey && !turnstileToken){
+      var et=document.getElementById('err-turnstile');
+      if(et){ et.textContent='Please complete the spam check.'; et.classList.add('on'); }
+      var box=document.getElementById('scan-turnstile');
+      if(box && box.scrollIntoView) box.scrollIntoView({block:'center'});
+      return;
+    }
     sendReport();
   });
   mountTurnstile();
@@ -348,28 +355,63 @@ function validateLead(){
   if(first && first.focus) first.focus();
   return ok;
 }
+function showResultsWithoutEmail(message){
+  readLead();
+  S.mail={state:'failed', email:S.lead.email||'', message:message};
+  S.step='done';
+  render();
+}
 function mountTurnstile(){
-  if(!turnstileKey) return;
+  if(!turnstileKey){ turnstileState='off'; return; }
+  turnstileState='loading';
+  function note(msg){
+    var et=document.getElementById('err-turnstile');
+    if(et){ et.textContent=msg; et.classList.add('on'); }
+  }
+  function markFailed(){
+    turnstileState='failed';
+    turnstileLoadError=true;
+    turnstileToken='';
+    note('The spam check could not load. Choose Email my report to see your results anyway. Nothing will be emailed until the check is available.');
+  }
   function draw(){
     var el=document.getElementById('scan-turnstile');
-    if(!el || !window.turnstile) return;
-    turnstileToken='';
-    turnstileWidget=window.turnstile.render(el,{
-      sitekey:turnstileKey,
-      theme:'dark',
-      callback:function(tok){ turnstileToken=tok; var e=document.getElementById('err-turnstile'); if(e) e.classList.remove('on'); },
-      'expired-callback':function(){ turnstileToken=''; },
-      'error-callback':function(){ turnstileToken=''; }
-    });
+    if(!el || !window.turnstile || typeof window.turnstile.render!=='function'){ markFailed(); return; }
+    try{
+      turnstileToken='';
+      /* Do not call turnstile.ready(). A script inserted from this page is async,
+         and Turnstile throws instead of rendering when ready() is used on an async tag. */
+      turnstileWidget=window.turnstile.render(el,{
+        sitekey:turnstileKey,
+        theme:'dark',
+        callback:function(tok){
+          turnstileToken=tok;
+          turnstileState='ready';
+          var e=document.getElementById('err-turnstile');
+          if(e) e.classList.remove('on');
+        },
+        'expired-callback':function(){ turnstileToken=''; if(turnstileState!=='failed') turnstileState='widget'; },
+        'error-callback':function(){ markFailed(); }
+      });
+      turnstileState='widget';
+    }catch(err){ markFailed(); }
   }
-  if(window.turnstile){ if(window.turnstile.ready) window.turnstile.ready(draw); else draw(); return; }
-  if(document.getElementById('cf-turnstile-api')) return;
+  if(window.turnstile && typeof window.turnstile.render==='function'){ draw(); return; }
+  var existing=document.getElementById('cf-turnstile-api');
+  if(existing){
+    if(existing.getAttribute('data-failed')==='1'){ markFailed(); return; }
+    existing.addEventListener('load', draw);
+    existing.addEventListener('error', markFailed);
+    return;
+  }
   var s=document.createElement('script');
   s.id='cf-turnstile-api';
   s.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-  s.async=true;
-  s.onload=function(){ if(window.turnstile&&window.turnstile.ready) window.turnstile.ready(draw); else draw(); };
+  s.async=false;
+  s.onload=function(){ draw(); };
+  s.onerror=function(){ s.setAttribute('data-failed','1'); markFailed(); };
   document.head.appendChild(s);
+  setTimeout(function(){ if(turnstileState==='loading') markFailed(); }, 8000);
 }
 function showWait(msg){
   if(lblEl) lblEl.textContent='Building your snapshot';
@@ -406,7 +448,7 @@ function sendReport(){
     clearTimeout(timer);
     if(res.json && res.json.sent){ S.mail={state:'sent', email:S.lead.email}; S.step='done'; render(); return; }
     if(res.status===400){ backToConsent('Please check the required fields and try again.'); return; }
-    if(res.status===403){ turnstileToken=''; if(window.turnstile && turnstileWidget!=null){ try{ window.turnstile.reset(turnstileWidget); }catch(e){} } backToConsent('The spam check did not pass. Try it again, or show your results without email.'); return; }
+    if(res.status===403){ S.mail={state:'failed', email:S.lead.email, message:'The spam check did not pass, so the report was not emailed. Your snapshot is below.'}; S.step='done'; render(); return; }
     if(res.status===429){ backToConsent('Too many attempts from this network. You can show your results without email.'); return; }
     S.mail={state:previewHost?'preview':'failed', email:S.lead.email}; S.step='done'; render();
   }).catch(function(){
@@ -445,6 +487,7 @@ function renderDone(){
 }
 function mailBanner(){
   if(!S.mail) return '';
+  if(S.mail.message) return '<p class="mail-status warn">'+esc(S.mail.message)+'</p>';
   if(S.mail.state==='sent') return '<p class="mail-status ok">Your report is on its way to '+esc(S.mail.email)+'. We sent a copy to NetArmored too.</p>';
   if(S.mail.state==='preview') return '<p class="mail-status warn">preview: emails are not sent from this preview. Your snapshot is below, and nothing was sent.</p>';
   if(S.mail.state==='failed') return '<p class="mail-status warn">We could not email the report just now. Your snapshot is below. You can still schedule a conversation, or email hello@netarmored.com.</p>';

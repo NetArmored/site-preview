@@ -89,12 +89,7 @@ The live site sends:
 default-src 'self'; img-src 'self' data:; media-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'
 ```
 
-`_headers` keeps that policy and adds only what Turnstile’s documentation requires:
-
-- `script-src` also allows `https://challenges.cloudflare.com`
-- `frame-src` allows `https://challenges.cloudflare.com`
-
-`connect-src` stays `'self'`. That is enough for Turnstile pre-clearance and is not required for the normal widget.
+`_headers` keeps that policy and adds the Turnstile hosts. `api.js` comes from `https://challenges.cloudflare.com`. The challenge request itself goes to a subdomain such as `https://brunhild.challenges.cloudflare.com`, so `script-src`, `frame-src`, `connect-src`, and `img-src` also allow `https://*.challenges.cloudflare.com`. `connect-src` still includes `'self'`.
 
 If a Transform Rule or an older `_headers` file on the Pages project still sends the previous CSP, update that rule in place or remove it. Two CSP headers are both enforced, and the old one would block the Turnstile script.
 
