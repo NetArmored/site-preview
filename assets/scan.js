@@ -162,7 +162,18 @@ function pickFollowUp(){
 }
 
 /* ---------------- UI ---------------- */
-var body=document.querySelector('.scan-body')||document.getElementById('scan-body')||root;
+var body=(function(){
+  var b=document.querySelector('.scan-body');
+  if(b) return b;
+  var shell=document.querySelector('.scan-shell');
+  if(!shell){
+    root.innerHTML='<div class="scan-shell"><div class="scan-top"><span class="lbl">Choose your scan</span><div class="prog" aria-hidden="true"><span style="width:0"></span></div></div><div class="scan-body"></div></div>';
+    shell=root.querySelector('.scan-shell');
+  }
+  b=shell.querySelector('.scan-body');
+  if(!b){ b=document.createElement('div'); b.className='scan-body'; shell.appendChild(b); }
+  return b;
+})();
 var lblEl=document.getElementById('scan-lbl')||document.querySelector('.scan-top .lbl');
 var progEl=document.getElementById('scan-prog')||document.querySelector('.scan-top .prog span');
 var first=true;
