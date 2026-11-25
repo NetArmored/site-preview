@@ -162,12 +162,13 @@ function pickFollowUp(){
 }
 
 /* ---------------- UI ---------------- */
-var body=document.getElementById('scan-body')||root;
-var lblEl=document.getElementById('scan-lbl');
-var progEl=document.getElementById('scan-prog');
+var body=document.querySelector('.scan-body')||document.getElementById('scan-body')||root;
+var lblEl=document.getElementById('scan-lbl')||document.querySelector('.scan-top .lbl');
+var progEl=document.getElementById('scan-prog')||document.querySelector('.scan-top .prog span');
 var first=true;
 function setTop(step,total){
-  if(!lblEl||!progEl) return;
+  if(lblEl) lblEl.textContent = (S.ind ? (IND[S.ind]||{}).name||'' : '') + (step>=0 ? ' · '+(step+1)+' of '+total : '');
+  if(!progEl) return;
   var pct=Math.max(0,Math.min(100, (step<0?0:step+1)/total*100 ));
   progEl.style.width=pct+'%';
 }
@@ -191,7 +192,7 @@ function renderTrack(){
 }
 function renderQ(){
   var qs=questions(), q=qs[S.step], total=5, n=S.step+1;
-  lblEl.textContent=(S.ind==='hospitality'?'Hospitality scan':IND[S.ind].name+' scan')+' \u00b7 '+n+' of '+total; setTop(S.step,total);
+  if(lblEl) lblEl.textContent=(S.ind==='hospitality'?'Hospitality scan':IND[S.ind].name+' scan')+' \u00b7 '+n+' of '+total; setTop(S.step,total);
   var cur=S.a[q.id], multi=q.type==='multi';
   var h='<div class="qwrap'+(S.dir<0?' back':'')+'"><p class="qnum">'+(S.ind==='hospitality'?'Discovery \u2014 ':'')+'Question '+n+' of '+total+'</p><h2 class="qtitle" id="qt">'+esc(q.title)+'</h2><p class="qhelp">'+esc(q.help&&q.help.indexOf('Discovery')===0?'Pick the closest fit.':q.help||'')+'</p>';
   if(multi && q.help && q.help.indexOf('star')===-1) q.help = (q.help||'') + ' Select all that apply, then star \u2605 the most important one.';
@@ -255,14 +256,14 @@ function save(q,validate){
   return ok;
 }
 function renderFU(){
-  var f=FU[S.fu]; lblEl.textContent='One clarifying question'; setTop(5,5);
+  var f=FU[S.fu]; if(lblEl) lblEl.textContent='One clarifying question'; setTop(5,5);
   body.innerHTML='<div class="qwrap"><div class="followup" style="margin-top:0"><span class="tag">'+esc(f.tag)+'</span><h2 class="qtitle" id="fq">'+esc(f.title)+'</h2><p class="qhelp" style="margin-bottom:16px">Optional \u2014 it sharpens your snapshot. We only ask the single question most likely to change the recommendation.</p><div class="answers" role="radiogroup" aria-labelledby="fq">'+f.opts.map(function(o){return '<label class="ans"><input type="radio" name="fu" value="'+o[0]+'"'+(S.fuA===o[0]?' checked':'')+'><span class="box" aria-hidden="true"></span><span><b>'+esc(o[1])+'</b></span></label>';}).join('')+'</div></div><div class="scan-nav"><button type="button" class="btn btn-g" data-act="back"><span aria-hidden="true">\u2190</span> Back</button><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="btn btn-g" data-act="skip">Skip</button><button type="button" class="btn btn-p" data-act="go">See my snapshot <span class="arr" aria-hidden="true">\u2192</span></button></span></div></div>';
   body.querySelector('[data-act=back]').addEventListener('click',function(){ S.dir=-1; S.step=4; render(); });
   body.querySelector('[data-act=skip]').addEventListener('click',function(){ S.fuA=null; finish(); });
   body.querySelector('[data-act=go]').addEventListener('click',function(){ var c=body.querySelector('input[name=fu]:checked'); S.fuA=c?c.value:null; finish(); });
 }
 function finish(){
-  S.step='think'; lblEl.textContent='Building your snapshot'; setTop(5,5); progEl.style.width='100%';
+  S.step='think'; if(lblEl) lblEl.textContent='Building your snapshot'; setTop(5,5); if(progEl) progEl.style.width='100%';
   body.innerHTML='<div class="qwrap" style="text-align:center;padding:40px 20px"><div class="thinking"><span></span><span></span><span></span></div><h2 class="qtitle">Building your snapshot</h2><p class="qhelp">Matching your answers to practical opportunities. This stays in your browser \u2014 nothing is sent.</p></div>';
   setTimeout(function(){ S.step='done'; render(); }, RM?100:900);
 }
