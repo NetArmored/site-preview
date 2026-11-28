@@ -17,7 +17,7 @@ body{margin:0;background:var(--navy);color:var(--silver);font:400 17px/1.65 var(
 body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:
  radial-gradient(900px 600px at 85% -10%,rgba(55,125,255,.16),transparent 60%),
  radial-gradient(700px 500px at -10% 30%,rgba(45,212,191,.07),transparent 60%),var(--navy)}
-img,video,canvas,svg{max-width:100%;display:block}
+img,video,canvas,svg{max-width:100%;height:auto;display:block}
 a{color:#8DB5FF;text-decoration:none}
 a:hover{color:var(--white)}
 :focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:6px}
@@ -227,13 +227,19 @@ section{position:relative}
 /* industries */
 .icard{display:flex;flex-direction:column;height:100%;text-decoration:none;color:inherit}
 .icard .img{aspect-ratio:16/10;border-radius:12px;overflow:hidden;margin-bottom:16px;background:#0A1220}
-.icard img{width:100%;height:100%;object-fit:cover}
+.icard img{width:100%;height:100%;object-fit:cover;object-position:center}
 .icard h3{font-size:1.12rem}
 .icard p{font-size:.9rem;color:#AEBBCD;margin:0}
-.icard.feature{grid-column:span 2;flex-direction:row;gap:24px}
-.icard.feature .img{flex:0 0 45%;aspect-ratio:auto;min-height:180px;margin:0}
+.icard.feature{grid-column:span 2;flex-direction:row;gap:24px;align-items:center}
+.icard.feature .img{flex:0 0 46%;width:46%;aspect-ratio:16/10;align-self:center;margin:0}
+.ind-card{padding:0;overflow:hidden;display:flex;flex-direction:column}
+.ind-card img{width:100%;aspect-ratio:16/10;height:auto;object-fit:cover;object-position:center}
+.ind-card>div{padding:22px 26px 26px}
+.phero-img,.photo{position:relative;width:100%;min-width:0}
+.phero-img img,.photo img{width:100%;height:auto;object-fit:cover;object-position:center;border-radius:20px}
+.dd img{width:72px;height:48px;object-fit:cover;object-position:center;border-radius:8px;flex:none}
 @media (max-width:1000px){.icard.feature{grid-column:span 2}}
-@media (max-width:640px){.icard.feature{grid-column:auto;flex-direction:column}.icard.feature .img{aspect-ratio:16/9;min-height:0}}
+@media (max-width:640px){.icard.feature{grid-column:auto;flex-direction:column}.icard.feature .img{aspect-ratio:16/10;min-height:0;flex:none;width:100%}}
 
 /* trust */
 .trust-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:48px;align-items:center}
@@ -422,11 +428,10 @@ details.assume ul{margin:12px 0 0;padding-left:18px;font-size:.88rem;color:var(-
   .opp{background:#fff;border-color:#ccc}
   .score .m i{background:#377DFF}
 }
-@media (max-width:960px){.split,.split.rev{grid-template-columns:1fr;gap:36px}}
 .split{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
 .split.rev{grid-template-columns:.95fr 1.05fr}
 .split.rev > :first-child{order:2}
-@media (max-width:960px){.split.rev > :first-child{order:0}}
+@media (max-width:960px){.split,.split.rev{grid-template-columns:1fr;gap:36px}.split.rev > :first-child{order:0}}
 
 /* case */
 .case dl{display:grid;grid-template-columns:120px 1fr;gap:8px 16px;margin:16px 0}
