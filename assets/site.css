@@ -58,7 +58,7 @@ section{position:relative}
 .brand svg{width:34px;height:38px}
 .brand img.logo-mark{height:44px;width:auto;border-radius:8px;display:block;flex:0 0 auto;background:#143056;object-fit:cover}
 .logo-wide{margin:0;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
-.logo-wide img{display:block;width:100%;height:auto}
+.logo-wide img,.logo-wide video{display:block;width:100%;height:auto;aspect-ratio:auto;object-fit:contain;object-position:center}
 .brand small{display:block;font:500 .6rem/1 var(--fm);letter-spacing:.18em;color:var(--muted);margin-top:4px;text-transform:uppercase}
 .nav{display:flex;gap:2px;margin-left:auto;align-items:center}
 .nav>li{list-style:none;position:relative}
@@ -237,6 +237,8 @@ section{position:relative}
 .ind-card>div{padding:22px 26px 26px}
 .phero-img,.photo{position:relative;width:100%;min-width:0}
 .phero-img img,.photo img{width:100%;height:auto;object-fit:cover;object-position:center;border-radius:20px}
+.photo.p169{aspect-ratio:16/9}
+.photo.p169 img{height:100%}
 .dd img{width:72px;height:48px;object-fit:cover;object-position:center;border-radius:8px;flex:none}
 @media (max-width:1000px){.icard.feature{grid-column:span 2}}
 @media (max-width:640px){.icard.feature{grid-column:auto;flex-direction:column}.icard.feature .img{aspect-ratio:16/10;min-height:0;flex:none;width:100%}}
